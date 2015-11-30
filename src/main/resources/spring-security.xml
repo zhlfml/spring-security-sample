@@ -2,10 +2,8 @@
 <beans:beans xmlns="http://www.springframework.org/schema/security"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:beans="http://www.springframework.org/schema/beans"
-             xsi:schemaLocation="http://www.springframework.org/schema/security
-      http://www.springframework.org/schema/security/spring-security-3.2.xsd
-      http://www.springframework.org/schema/beans
-      http://www.springframework.org/schema/beans/spring-beans-4.1.xsd">
+             xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+      http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd">
 
     <http use-expressions="true">
         <intercept-url pattern="/login*" access="isAnonymous()"/>
@@ -22,10 +20,13 @@
         <logout logout-url="/logout"
                 invalidate-session="true"
                 logout-success-url="/login.jsp"/>
+
+        <!--<csrf/>-->
     </http>
 
     <authentication-manager>
         <authentication-provider>
+            <password-encoder hash="md5"/>
             <jdbc-user-service data-source-ref="dataSource"
                                users-by-username-query="SELECT username, password, true FROM user WHERE username = ?"
                                authorities-by-username-query="SELECT u.username, r.role_name FROM user u LEFT JOIN user_role ur ON u.id = ur.user_id LEFT JOIN role r ON ur.role_id = r.id WHERE u.username = ?"/>

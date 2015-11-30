@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration debug="true">
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%d{HH:mm:ss} %-5level %t %logger{0}:%L - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="me.thomas.sample" level="info" appender-ref="stdout" />
+
+	<root>
+		<level value="debug" />
+		<appender-ref ref="stdout" />
+	</root>
+</configuration>

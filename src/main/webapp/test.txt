@@ -1,0 +1,3 @@
+[access_token] = http://localhost:8080/security/oauth/token?client_id=mobile-client&client_secret=mobile&grant_type=password&username=zxs&password=zxs
+
+http://localhost:8080/security/users/info?access_token=[access_token]

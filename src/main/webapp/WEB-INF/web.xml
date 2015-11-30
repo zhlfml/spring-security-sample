@@ -9,6 +9,7 @@
         <param-name>contextConfigLocation</param-name>
         <param-value>
             classpath:applicationContext.xml
+            classpath:spring-oauth2.xml
             classpath:spring-security.xml
         </param-value>
     </context-param>
