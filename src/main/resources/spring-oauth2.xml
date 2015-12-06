@@ -8,13 +8,15 @@
       http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd">
 
     <client-details-service id="clientDetailsService">
-        <client client-id="browser-client" resource-ids="user-resource"
-                authorized-grant-types="authorization_code,refresh-token"
-                redirect-uri="http://localhost:8080/security/users/info"
-                secret="browser" authorities="ROLE_BROWSER" scope="read,write"/>
+        <!-- 通过client_credentials的方式，authorities必须配置，用以指定用户的角色 -->
+        <!-- 这种方式似乎返回的json里不包含refresh-token的项 -->
+        <client client-id="my-client-with-secret" resource-ids="user-resource"
+                authorized-grant-types="client_credentials,refresh_token" authorities="ROLE_CLIENT,ROLE_MOBILE"
+                scope="read" secret="secret"/>
+        <!-- 通过password的方式，authorities可以不用配置，用户的角色直接从数据库读取 -->
         <client client-id="mobile-client" resource-ids="user-resource"
-                authorized-grant-types="password,refresh-token"
-                secret="mobile" authorities="ROLE_MOBILE" scope="read,write"/>
+                authorized-grant-types="password,refresh_token"
+                scope="read" secret="mobile"/>
     </client-details-service>
 
     <beans:bean id="tokenStore" class="org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore"/>
@@ -25,15 +27,17 @@
         <beans:property name="supportRefreshToken" value="true"/>
     </beans:bean>
 
-    <resource-server id="userResourceServer" resource-id="user-resource" token-services-ref="tokenServices"/>
+    <resource-server id="userResourceServerFilter" resource-id="user-resource" token-services-ref="tokenServices"/>
 
-    <beans:bean id="authorizationCodeServices" class="org.springframework.security.oauth2.provider.code.InMemoryAuthorizationCodeServices"/>
+    <beans:bean id="authorizationCodeServices"
+                class="org.springframework.security.oauth2.provider.code.InMemoryAuthorizationCodeServices"/>
 
     <beans:bean id="approveStore" class="org.springframework.security.oauth2.provider.approval.TokenApprovalStore">
         <beans:property name="tokenStore" ref="tokenStore"/>
     </beans:bean>
 
-    <beans:bean id="oAuth2RequestFactory" class="org.springframework.security.oauth2.provider.request.DefaultOAuth2RequestFactory">
+    <beans:bean id="oAuth2RequestFactory"
+                class="org.springframework.security.oauth2.provider.request.DefaultOAuth2RequestFactory">
         <beans:constructor-arg name="clientDetailsService" ref="clientDetailsService"/>
     </beans:bean>
 
@@ -45,7 +49,8 @@
     </beans:bean>
 
     <authorization-server client-details-service-ref="clientDetailsService" token-services-ref="tokenServices"
-            user-approval-handler-ref="userApprovalHandler" user-approval-page="oauth_approve" error-page="oauth_error">
+                          user-approval-handler-ref="userApprovalHandler" user-approval-page="oauth_approve"
+                          error-page="oauth_error">
         <authorization-code authorization-code-services-ref="authorizationCodeServices"/>
         <implicit/>
         <refresh-token/>
@@ -62,25 +67,30 @@
         <security:authentication-provider user-service-ref="oauth2ClientDetailsUserDetailsService"/>
     </security:authentication-manager>
 
-    <beans:bean id="oauth2AccessDeniedHandler" class="org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler"/>
-    <beans:bean id="oauth2AuthenticationEntryPoint" class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint"/>
+    <beans:bean id="oauth2AccessDeniedHandler"
+                class="org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler"/>
+    <!-- access_token验证无效处理类 -->
+    <beans:bean id="oauth2AuthenticationEntryPoint"
+                class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint"/>
 
     <beans:bean id="clientCredentialsTokenEndpointFilter"
                 class="org.springframework.security.oauth2.provider.client.ClientCredentialsTokenEndpointFilter">
         <beans:property name="authenticationManager" ref="oauth2AuthenticationManager"/>
     </beans:bean>
 
-    <beans:bean id="oauth2AccessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+    <beans:bean id="oauth2AccessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased">
         <beans:constructor-arg>
             <beans:list>
                 <beans:bean class="org.springframework.security.oauth2.provider.vote.ScopeVoter"/>
                 <beans:bean class="org.springframework.security.access.vote.RoleVoter"/>
+                <!-- 用户必须已经通过认证 -->
                 <beans:bean class="org.springframework.security.access.vote.AuthenticatedVoter"/>
             </beans:list>
         </beans:constructor-arg>
     </beans:bean>
 
-    <security:http pattern="/oauth/token" create-session="stateless" authentication-manager-ref="oauth2AuthenticationManager"
+    <security:http pattern="/oauth/token" create-session="stateless"
+                   authentication-manager-ref="oauth2AuthenticationManager"
                    entry-point-ref="oauth2AuthenticationEntryPoint" use-expressions="false">
         <security:intercept-url pattern="/oauth/token" access="IS_AUTHENTICATED_FULLY"/>
         <security:anonymous enabled="false"/>
@@ -91,10 +101,10 @@
     </security:http>
 
     <security:http pattern="/users/**" create-session="never" entry-point-ref="oauth2AuthenticationEntryPoint"
-          access-decision-manager-ref="oauth2AccessDecisionManager" use-expressions="false">
-        <security:intercept-url pattern="/users/**" access="ROLE_BROWSER,ROLE_MOBILE,SCOPE_READ"/>
+                   access-decision-manager-ref="oauth2AccessDecisionManager" use-expressions="false">
+        <security:intercept-url pattern="/users/**" access="ROLE_CLIENT,ROLE_MOBILE,SCOPE_READ"/>
         <security:anonymous enabled="false"/>
-        <security:custom-filter ref="userResourceServer" before="PRE_AUTH_FILTER"/>
+        <security:custom-filter ref="userResourceServerFilter" before="PRE_AUTH_FILTER"/>
         <security:access-denied-handler ref="oauth2AccessDeniedHandler"/>
         <!--<security:csrf/>-->
     </security:http>
